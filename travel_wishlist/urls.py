@@ -9,3 +9,9 @@ urlpatterns = [
     path('place/<int:place_pk>', views.place_details, name='place_details'),
     path('place/<int:place_pk>/delete', views.delete_place, name='delete_place')
 ]
+
+from django.conf import settings
+from django.conf.urls.static import static
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
