@@ -1,0 +1,8 @@
+cloud_sql_proxy
+env
+*.pyc
+__pycachche__
+.idea
+db.sqlite3
+travel_credentials.json
+app.yaml

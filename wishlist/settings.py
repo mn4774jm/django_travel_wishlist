@@ -24,9 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'neku&@s0f!j9ql$5zdkz%+*ri^yf*&=9e((o-e*_nadqd4@v3%'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+if os.getenv('GAE_INSTANCE'):
+    DEBUG = False
+else:
+    DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -74,13 +77,28 @@ WSGI_APPLICATION = 'wishlist.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/3.1/ref/settings/#databases
-
+# Use export TRAVELER_PW='password' and echo $TRAVELER_PW to check that the correct pw is set
+# ./cloud_sql_proxy -instances=braided-analyst-295416:us-central1:wishlist-db=tcp:5432 to start the cloud proxy on mac
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'places',
+        'USER': 'Traveler',
+        'PASSWORD': os.getenv('TRAVELER_PW'),
+        'HOST': '/cloudsql/braided-analyst-295416:us-central1:wishlist-db',
+        'PORT': '5432'
     }
 }
+
+# If not running at GAE, then replace the host with your local
+# computer to connect to the database via cloud_sql_proxy
+if not os.getenv('GAE_INSTANCE'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3')
+        }
+    }
 
 
 # Password validation
@@ -119,10 +137,30 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
-STATIC_URL = '/static/'
 
-# Media URL, for user-created media - becomes a part of the URL when images are displayed
-MEDIA_URL = '/media/'
 
 # Where in the file system to save user-uploaded files
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'www', 'static')
+
+if not os.getenv('GAE_INSTANCE'):
+    # Static and media files at app engine
+    GS_STATIC_FILE_BUCKET = 'braided-analyst-295416.appspot.com'
+    STATIC_URL = f'https://storage.cloud.google.com/{GS_STATIC_FILE_BUCKET}/static/'
+
+    GS_BUCKET_NAME = 'user-uploads-111'
+    MEDIA_URL = f'https://storage.cloud.google.com/{GS_BUCKET_NAME}/MEDIA/'
+
+    DEFAULT_FILE_STORAGE = 'storages.backends.gcloud.GoogleCloudStorage'
+
+    from google.oauth2 import service_account
+    GS_CREDENTIALS = service_account.Credentials.from_service_account_file('travel_credentials.json')
+
+else:
+    # developing locally
+    STATIC_URL = '/static/'
+
+    # Media URL, for user-created media - becomes part of the URL when you upload images
+    MEDIA_URL = '/media/'
+
